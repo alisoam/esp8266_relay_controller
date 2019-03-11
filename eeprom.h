@@ -1,9 +1,6 @@
 #ifndef EEPROM_H
 #define EEPROM_H
 
-# ifndef EEPROM_ADDR
-#   define EEPROM_ADDR 0x50
-# endif
 void i2c_eeprom_write_byte( int deviceaddress, unsigned int eeaddress, byte data );
 
 // WARNING: address is a page address, 6-bit end will wrap around
