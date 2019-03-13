@@ -5,6 +5,7 @@
 #include <list>
 #include <string>
 #include <vector>
+#include <cstring>
 #include <sstream>
 #include <iostream>
 #include <exception>
@@ -19,7 +20,7 @@ class CommandLineException: public std::exception
 public:
   CommandLineException(const char* what)
   {
-    strncpy(what_, what, 40);
+    std::strncpy(what_, what, 40);
     what_[39] = 0;
   }
   virtual const char* what() const noexcept
@@ -49,6 +50,13 @@ public:
       arguments.emplace_back(argument);
     try
     {
+      if (command == "help")
+      {
+        std::string helpString = "Available commands:\n";
+        for (auto& command: functions)
+          helpString += command.first;
+        return "";
+      }
       return functions.at(command)(arguments);
     }
     catch (CommandLineException&)

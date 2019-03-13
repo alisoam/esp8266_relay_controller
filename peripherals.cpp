@@ -1,6 +1,6 @@
-#include <Wire.h>
-#include <RTClib.h>
-#include <ESP8266WiFi.h>
+#include "peripherals.hpp"
+
+#include "parameters.hpp"
 
 RTC_DS1307 rtc;
 WiFiClient espClient;
@@ -14,7 +14,7 @@ WiFiClient espClient;
 
 static void setupRtc()
 {
-  delay(10);
+  delay(100);
   if (! rtc.begin())
   {
     Serial.println("Couldn't find RTC");
@@ -22,18 +22,18 @@ static void setupRtc()
   }
   if (! rtc.isrunning()) {
     Serial.println("RTC is NOT running!");
-    // rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
+    rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
     // rtc.adjust(DateTime(2014, 1, 21, 3, 0, 0));
   }
 }
 
 static void setupWifi()
 {
-  delay(10);
+  delay(100);
   Serial.println();
   Serial.print("Connecting to ");
   Serial.println(WIFI_SSID);
-  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+  WiFi.begin(getWifiSsid(), getWifiPassword());
 //  while (WiFi.status() != WL_CONNECTED) {
 //    delay(500);
 //    Serial.print(".");
@@ -44,11 +44,8 @@ static void setupWifi()
   Serial.println(WiFi.localIP());
 }
 
-void peripheralsSetup()
+void setupPeripherals()
 {
-  Serial.begin(115200);
-  Serial.println("start");
-  Wire.begin();
   setupRtc();
   setupWifi();
 }

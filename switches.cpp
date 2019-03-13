@@ -1,3 +1,9 @@
+#include "switches.hpp"
+
+#include <cstdint>
+
+#include <Arduino.h>
+
 bool switches[SWITCHES_NUMBER] = {false};
 const uint8_t switchOut[SWITCHES_NUMBER] = {15, 10, 12, 16};
 const uint8_t switchFeedbackIn[SWITCHES_NUMBER] = {0, 2, 13, 14};
@@ -15,14 +21,27 @@ void setupSwitch()
   }
 }
 
+void switchSet(unsigned int index, bool status)
+{
+  if (index < SWITCHES_NUMBER)
+    switches[index] = status;
+}
 
-void switchSet()
+bool switchGet(unsigned int index)
+{
+  if (index < SWITCHES_NUMBER)
+    return switches[index];
+  return false;
+}
+
+static void switchPerform()
 {
   for (unsigned int index = 0; index < SWITCHES_NUMBER; index++)
     digitalWrite(switchOut[index], switches[index]);
 }
 
-void switchStatusCheck()
+void switchesLoop()
 {
-  switchSet();
+  //TODO check broken contacts
+  switchPerform();
 }

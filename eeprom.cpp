@@ -1,77 +1,96 @@
-#include "eeprom.h"
+#include "eeprom.hpp"
 
+#include <algorithm>
+
+#include <Arduino.h>
 #include <Wire.h>
 
-void i2c_eeprom_write_byte( int deviceaddress, unsigned int eeaddress, byte data ) {
+void eepromWriteByte(int deviceaddress, unsigned int eeaddress, uint8_t data)
+{
   int rdata = data;
   Wire.beginTransmission(deviceaddress);
-  Wire.write((int)(eeaddress >> 8)); // MSB
-  Wire.write((int)(eeaddress & 0xFF)); // LSB
+  Wire.write((int)(eeaddress >> 8));
+  Wire.write((int)(eeaddress & 0xFF));
   Wire.write(rdata);
   Wire.endTransmission();
+  delay(10);
 }
 
-// WARNING: address is a page address, 6-bit end will wrap around
-// also, data can be maximum of about 30 bytes, because the Wire library has a buffer of 32 bytes
-void i2c_eeprom_write_page( int deviceaddress, unsigned int eeaddresspage, byte* data, byte length ) {
-  Wire.beginTransmission(deviceaddress);
-  Wire.write((int)(eeaddresspage >> 8)); // MSB
-  Wire.write((int)(eeaddresspage & 0xFF)); // LSB
-  byte c;
-  for ( c = 0; c < length; c++)
-    Wire.write(data[c]);
-  Wire.endTransmission();
+void eepromWrite(int deviceaddress, unsigned int eeaddress, uint8_t* buffer, unsigned int length)
+{
+  unsigned int writtenLength = 0;
+  while (writtenLength < length)
+  {
+    Wire.beginTransmission(deviceaddress);
+    Wire.write((int)((eeaddress + writtenLength) >> 8)); // MSB
+    Wire.write((int)((eeaddress + writtenLength) & 0xFF)); // LSB
+    unsigned int currentWriteLength = std::min(length - writtenLength, EEPROM_MAX_LEN);
+    currentWriteLength = std::min(currentWriteLength, EEPROM_PAGE_SIZE - (eeaddress + writtenLength) % EEPROM_PAGE_SIZE);
+    for (unsigned int c = 0; c < currentWriteLength; c++)
+      Wire.write(buffer[writtenLength + c]);
+    Wire.endTransmission();
+    writtenLength += currentWriteLength;
+    delay(10);
+  }
 }
 
-byte i2c_eeprom_read_byte( int deviceaddress, unsigned int eeaddress ) {
-  byte rdata = 0xFF;
+uint8_t eepromReadByte(int deviceaddress, unsigned int eeaddress)
+{
+  uint8_t rdata = 0xFF;
   Wire.beginTransmission(deviceaddress);
   Wire.write((int)(eeaddress >> 8)); // MSB
   Wire.write((int)(eeaddress & 0xFF)); // LSB
   Wire.endTransmission();
   Wire.requestFrom(deviceaddress, 1);
-  if (Wire.available()) rdata = Wire.read();
+  if (Wire.available())
+    rdata = Wire.read();
+  delay(10);
   return rdata;
 }
 
-// maybe let's not read more than 30 or 32 bytes at a time!
-void i2c_eeprom_read_buffer( int deviceaddress, unsigned int eeaddress, byte *buffer, int length ) {
-  Wire.beginTransmission(deviceaddress);
-  Wire.write((int)(eeaddress >> 8)); // MSB
-  Wire.write((int)(eeaddress & 0xFF)); // LSB
-  Wire.endTransmission();
-  Wire.requestFrom(deviceaddress, length);
-  int c = 0;
-  for ( c = 0; c < length; c++ )
-    if (Wire.available()) buffer[c] = Wire.read();
+void eepromRead(int deviceaddress, unsigned int eeaddress, uint8_t *buffer, unsigned int length)
+{
+  unsigned int readLength = 0;
+  while (readLength < length)
+  {
+    Wire.beginTransmission(deviceaddress);
+    Wire.write((int)((eeaddress + readLength) >> 8)); // MSB
+    Wire.write((int)((eeaddress + readLength) & 0xFF)); // LSB
+    Wire.endTransmission();
+    unsigned int currentReadLength = std::min(length - readLength, EEPROM_MAX_LEN);
+    Wire.requestFrom(deviceaddress, currentReadLength);
+    for (unsigned int c = 0; c < currentReadLength; c++)
+      if (Wire.available())
+        buffer[readLength + c] = Wire.read();
+      else
+        return;
+    readLength += currentReadLength;
+    delay(10);
+  }
 }
 
+void eepromReadString(int deviceaddress, unsigned int eeaddress, unsigned int len, char* buffer, unsigned int bufferLen)
+{
+  auto readLen = std::min(len, bufferLen - 1);
+  eepromRead(deviceaddress, eeaddress, (uint8_t*)buffer, readLen);
+  buffer[readLen] = '\0';
+}
 
-//
-//
-//void setup()
-//{
-//    char somedata[] = "this is data from the eeprom"; // data to write
-//    Wire.begin(); // initialise the connection
-//    Serial.begin(9600);
-//    i2c_eeprom_write_page(0x50, 0, (byte *)somedata, sizeof(somedata)); // write to EEPROM
-//
-//    delay(100); //add a small delay
-//
-//    Serial.println("Memory written");
-//}
-//
-//void loop()
-//{
-//    int addr=0; //first address
-//    byte b = i2c_eeprom_read_byte(0x50, 0); // access the first address from the memory
-//
-//    while (b!=0)
-//    {
-//        Serial.print((char)b); //print content to serial port
-//        addr++; //increase address
-//        b = i2c_eeprom_read_byte(0x50, addr); //access an address from the memory
-//    }
-//    Serial.println(" ");
-//    delay(2000);
-//}
+void eepromWriteString(int deviceaddress, unsigned int eeaddress, unsigned int len, const char* str)
+{
+  auto writeLen = std::min(strlen(str) + 1, EEPROM_MAX_LEN);
+  writeLen = std::min(writeLen, len);
+  eepromWrite(deviceaddress, eeaddress, (uint8_t*)str, writeLen);
+}
+
+unsigned int eepromReadUnsignedInt(int deviceaddress, unsigned int eeaddress)
+{
+  unsigned int toBeReturned;
+  eepromRead(deviceaddress, eeaddress, (uint8_t*)&toBeReturned, EEPROM_UNSINGED_INT_SIZE);
+  return toBeReturned;
+}
+
+void eepromWriteUnsignedInt(int deviceaddress, unsigned int eeaddress, unsigned int value)
+{
+  eepromWrite(deviceaddress, eeaddress, (uint8_t*)&value, EEPROM_UNSINGED_INT_SIZE);
+}
