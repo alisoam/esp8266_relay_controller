@@ -5,25 +5,22 @@
 RTC_DS1307 rtc;
 WiFiClient espClient;
 
-#define WIFI_SSID "Home 2"
-#define WIFI_PASSWORD "74221776"
-
-//#define WIFI_SSID "AndroidAP"
-//#define WIFI_PASSWORD "swdm6003"
-
+IPAddress local_IP(192,168,4,22);
+IPAddress gateway(192,168,4,22);
+IPAddress subnet(255,255,255,0);
 
 static void setupRtc()
 {
   delay(100);
-  if (! rtc.begin())
+  if (!rtc.begin())
   {
     Serial.println("Couldn't find RTC");
     while (1);
   }
-  if (! rtc.isrunning()) {
+  if (!rtc.isrunning())
+  {
     Serial.println("RTC is NOT running!");
     rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
-    // rtc.adjust(DateTime(2014, 1, 21, 3, 0, 0));
   }
 }
 
@@ -32,16 +29,18 @@ static void setupWifi()
   delay(100);
   Serial.println();
   Serial.print("Connecting to ");
-  Serial.println(WIFI_SSID);
+  Serial.println(getWifiSsid());
   WiFi.begin(getWifiSsid(), getWifiPassword());
-//  while (WiFi.status() != WL_CONNECTED) {
-//    delay(500);
-//    Serial.print(".");
-//  }
-  Serial.println("");
-  Serial.println("WiFi connected");
-  Serial.println("IP address: ");
-  Serial.println(WiFi.localIP());
+
+  delay(100);
+  Serial.print("Setting soft-AP configuration ... ");
+  Serial.println(WiFi.softAPConfig(local_IP, gateway, subnet) ? "Ready" : "Failed!");
+
+  Serial.print("Setting soft-AP ... ");
+  Serial.println(WiFi.softAP("ESP Relay") ? "Ready" : "Failed!");
+
+  Serial.print("Soft-AP IP address = ");
+  Serial.println(WiFi.softAPIP());
 }
 
 void setupPeripherals()
