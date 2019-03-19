@@ -1,14 +1,18 @@
 #include "web_server.hpp"
 
 #include <FS.h>
- #include <ArduinoJson.h>
+#include <ArduinoJson.h>
 #include <ESP8266WebServer.h>
 
+#include "switches.hpp"
+
 static ESP8266WebServer webServer(80);
+StaticJsonDocument<500> jsonDoc;
 
 static void handleNotFound()
 {
-  webServer.send(404, "text/plain", "<html><title>404</title><body><h1>404<h1><br>Page Not found.</body></html>");
+  File file = SPIFFS.open("/web/404.html.gz", "r");
+  webServer.streamFile(file, "text/html");
 }
 
 static void root()
@@ -48,13 +52,13 @@ static void settingsMqtt()
 }
 
 
-static void apiSettingsWifi()
+static void apiWifiGet()
 {
   char json[] = R"_({"active":true,"ssid":"abcdefghijklmno"})_";
   webServer.send(200, "application/json", json);
 }
 
-static void apiSettingsWifiPost()
+static void apiWifiPost()
 {
   String message = "Body received:\n";
              message += webServer.arg("plain");
@@ -63,27 +67,47 @@ static void apiSettingsWifiPost()
   webServer.send(200, "application/json", "{}");
 }
 
-static void apiSettingsAp()
+static void apiApGet()
 {
   char json[] = R"_({"active":true,"ssid":"abcdefghijklmno"})_";
   webServer.send(200, "application/json", json);
 }
 
-static void apiSettingsApPost()
+static void apiApPost()
 {
-  Serial.println(webServer.arg('plain'));
+  Serial.println(webServer.arg("plain"));
   webServer.send(200, "application/json", "{}");
 }
 
-static void apiSettingsMqtt()
+static void apiMqttGet()
 {
   char json[] = R"_({"active":true, "secure":false,"hostname":"alisorouramini@gmail.com", "port":65123,"username":"abcdefghijklmno"})_";
   webServer.send(200, "application/json", json);
 }
 
-static void apiSettingsMqttPost()
+static void apiMqttPost()
 {
-  Serial.println(webServer.arg('plain'));
+  Serial.println(webServer.arg("plain"));
+  webServer.send(200, "application/json", "{}");
+}
+
+static void apiSwitchGet()
+{
+  jsonDoc.clear();
+  auto states = jsonDoc.createNestedArray("states");
+  for (unsigned int i = 0; i < SWITCHES_NUMBER; i++)
+    states.add(switchGet(i));
+  jsonDoc["error"] = true;
+  String json;
+  serializeJson(jsonDoc, json);
+  webServer.send(200, "application/json", json);
+}
+
+static void apiSwitchPost()
+{
+  jsonDoc.clear();
+  deserializeJson(jsonDoc, webServer.arg("plain"));
+  switchSet(jsonDoc["index"], jsonDoc["state"]);
   webServer.send(200, "application/json", "{}");
 }
 
@@ -138,19 +162,21 @@ static void styles()
 void setupWebServer()
 {
   webServer.on("/", HTTP_GET, root);
-  webServer.on("/about/", HTTP_GET, about);
-  webServer.on("/settings/", HTTP_GET, settings);
+  webServer.on("/about", HTTP_GET, about);
+  webServer.on("/settings", HTTP_GET, settings);
   webServer.on("/settings/wifi/", HTTP_GET, settingsWifi);
   webServer.on("/settings/ap/", HTTP_GET, settingsAp);
   webServer.on("/settings/mqtt/", HTTP_GET, settingsMqtt);
 
-  webServer.on("/api/settings/wifi", HTTP_GET, apiSettingsWifi);
-  webServer.on("/api/settings/ap", HTTP_GET, apiSettingsAp);
-  webServer.on("/api/settings/mqtt", HTTP_GET, apiSettingsMqtt);
+  webServer.on("/api/wifi", HTTP_GET, apiWifiGet);
+  webServer.on("/api/ap", HTTP_GET, apiApGet);
+  webServer.on("/api/mqtt", HTTP_GET, apiMqttGet);
+  webServer.on("/api/switches", HTTP_GET, apiSwitchGet);
 
-  webServer.on("/api/settings/wifi", HTTP_POST, apiSettingsWifiPost);
-  webServer.on("/api/settings/ap", HTTP_POST, apiSettingsApPost);
-  webServer.on("/api/settings/wifi", HTTP_POST, apiSettingsMqttPost);
+  webServer.on("/api/wifi", HTTP_POST, apiWifiPost);
+  webServer.on("/api/ap", HTTP_POST, apiApPost);
+  webServer.on("/api/wifi", HTTP_POST, apiMqttPost);
+  webServer.on("/api/switches", HTTP_POST, apiSwitchPost);
   
   webServer.on("/assets/bootstrap.min.css", HTTP_GET, bootstrapCss);
   webServer.on("/assets/bootstrap.min.js", HTTP_GET, bootstrapJs);

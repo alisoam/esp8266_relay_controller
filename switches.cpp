@@ -4,6 +4,8 @@
 
 #include <Arduino.h>
 
+#include "mqtt.hpp"
+
 bool switches[SWITCHES_NUMBER] = {false};
 const uint8_t switchOut[SWITCHES_NUMBER] = {15, 10, 12, 16};
 const uint8_t switchFeedbackIn[SWITCHES_NUMBER] = {0, 2, 13, 14};
@@ -24,7 +26,10 @@ void setupSwitch()
 void switchSet(unsigned int index, bool status)
 {
   if (index < SWITCHES_NUMBER)
+  {
     switches[index] = status;
+    publishStatus();
+  }
 }
 
 bool switchGet(unsigned int index)
