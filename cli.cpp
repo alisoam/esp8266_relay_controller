@@ -61,6 +61,39 @@ static std::string wifiCmd(const std::vector<std::string>& args)
   return IO_.str();
 }
 
+static std::string apCmd(const std::vector<std::string>& args)
+{
+  std::stringstream IO_;
+  if (args.size() == 0 or args.at(0) == "help")
+  {
+    IO_ << "ap get" << std::endl
+        << "ap set ssid [SSID] << std::endl"
+        << "ap set password [PASSWORD]";
+  }
+  else if (args.at(0) == "get")
+  {
+    IO_ << "ap: " << getApSsid() << ":" << getApPassword();
+  }
+  else if (args.at(0) == "set")
+  {
+    std::string arg;
+    for (unsigned int i = 2; i < args.size(); i++)
+      arg += args.at(i) + " ";
+    arg.pop_back();
+    if (args.at(1) == "ssid")
+    {
+      setApSsid(arg.c_str());
+      IO_ << "AP SSID set to: \"" << arg << "\".";
+    }
+    else if (args.at(1) == "password")
+    {
+      setApPassword(arg.c_str());
+      IO_ << "AP password set to: \"" << arg.c_str() << "\".";
+    }
+  }
+  return IO_.str();
+}
+
 static std::string mqttCmd(const std::vector<std::string>& args)
 {
   std::stringstream IO_;
@@ -105,7 +138,6 @@ static std::string mqttCmd(const std::vector<std::string>& args)
       setMqttPassword(arg.c_str());
       IO_ << "MQTT password set to: \"" << arg << "\".";
     }
-    IO_ << " You should restart the system.";
   }
   return IO_.str();
 }
@@ -134,7 +166,6 @@ static std::string deviceCmd(const std::vector<std::string>& args)
       setDeviceName(arg.c_str());
       IO_ << "Device name set to: \"" << arg << "\".";
     }
-    IO_ << " You should restart the system.";
   }
   return IO_.str();
 }
@@ -143,6 +174,7 @@ void setupCli()
 {
   cmd.addCommand("time", timeCmd);
   cmd.addCommand("wifi", wifiCmd);
+  cmd.addCommand("ap", apCmd);
   cmd.addCommand("mqtt", mqttCmd);
   cmd.addCommand("device", deviceCmd);
 }

@@ -10,6 +10,8 @@ extern RTC_DS1307 rtc;
 extern WiFiClient espClient;
 extern WiFiServer wifiServer;
 
+void restartAp();
+void restartWifi();
 void setupPeripherals();
 
 #endif

@@ -9,6 +9,12 @@ void setWifiPassword(const char* str);
 const char* getWifiSsid();
 const char* getWifiPassword();
 
+void setApSsid(const char* str);
+void setApPassword(const char* str);
+
+const char* getApSsid();
+const char* getApPassword();
+
 void setMqttHostname(const char* str);
 void setMqttUsername(const char* str);
 void setMqttPassword(const char* str);

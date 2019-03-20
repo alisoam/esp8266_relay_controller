@@ -6,6 +6,16 @@
 
 PubSubClient mqttClient(espClient);
 
+
+
+#define TOPIC_BUFFER_LEN    40
+static char topicBuffer[TOPIC_BUFFER_LEN];
+
+static void startMqtt()
+{
+  mqttClient.setServer(getMqttHostname(), getMqttPort());
+}
+
 void mqttCallback(const char* topic, byte* payload, unsigned int length)
 {
   Serial.println("MQTT Message");
@@ -16,27 +26,20 @@ void mqttCallback(const char* topic, byte* payload, unsigned int length)
   for (unsigned int i = 0; i < length; i++)
     Serial.print(*(char*)(payload + i));
   Serial.println("\"");
-  bool change = false;
   for (unsigned int index = 0; index < SWITCHES_NUMBER; index++)
   {
-    char topicCompairBuffer[20];
-    snprintf(topicCompairBuffer, 20, "%s/sw%u", getDeviceName(), index + 1);
-    if (strcmp(topic, topicCompairBuffer) == 0)
+    snprintf(topicBuffer, TOPIC_BUFFER_LEN, "%s/sw%u", getDeviceName(), index + 1);
+    if (strcmp(topic, topicBuffer) == 0)
     {
       if (length == 2 && strncmp((char*)payload, "ON", 2) == 0)
         switchSet(index, true);
       else if (length == 3 && strncmp((char*)payload, "OFF", 3) == 0)
         switchSet(index, false);
-        
       char buffer[20];
       snprintf(buffer, 20, "SW%u is %s", index + 1, (switchGet(index)? "ON": "OFF"));
       Serial.println(buffer);
-      
-      change = true;
     }
   }
-  if (change)
-    publishStatus();
 }
 
 void publishStatus()
@@ -56,7 +59,8 @@ void publishStatus()
   }
   buffer[start] = '}';
   buffer[start + 1] = '\0';
-  mqttClient.publish((std::string(getDeviceName()) + "/status").c_str(), buffer);
+  snprintf(topicBuffer, TOPIC_BUFFER_LEN, "%s/status", getDeviceName());
+  mqttClient.publish(topicBuffer, buffer);
   Serial.print("published: \"");
   Serial.print(buffer);
   Serial.println("\"");
@@ -64,8 +68,14 @@ void publishStatus()
 
 void setupMqtt()
 {
-  mqttClient.setServer(getMqttHostname(), getMqttPort());
   mqttClient.setCallback(mqttCallback);
+  startMqtt();
+}
+
+void restartMqtt()
+{
+  mqttClient.disconnect();
+  startMqtt();
 }
 
 void mqttConnectionCheck()
@@ -95,7 +105,8 @@ void mqttConnectionCheck()
     if (mqttClient.connected() and not subscribed)
     {
       Serial.println("mqtt is subscribing to corresponding topic");
-      subscribed = mqttClient.subscribe((std::string(getDeviceName()) + "/#").c_str());
+      snprintf(topicBuffer, TOPIC_BUFFER_LEN, "%s/#", getDeviceName());
+      subscribed = mqttClient.subscribe(topicBuffer);
     }
     else
       Serial.println("mqtt client is subscribed to corresponding topic");

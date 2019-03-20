@@ -6,6 +6,7 @@
 extern PubSubClient mqttClient;
 
 void setupMqtt();
+void restartMqtt();
 void mqttConnectionCheck();
 void publishStatus();
 

@@ -15,6 +15,10 @@
 # define EEPROM_UNSINGED_INT_SIZE sizeof(unsigned int)
 #endif
 
+#ifndef EEPROM_BOOL_SIZE
+# define EEPROM_BOOL_SIZE sizeof(char)
+#endif
+
 void eepromWriteByte(int deviceaddress, unsigned int eeaddress, uint8_t data);
 uint8_t eepromReadByte( int deviceaddress, unsigned int eeaddress);
 
