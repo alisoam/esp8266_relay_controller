@@ -35,16 +35,17 @@ void setup()
 void loop()
 {
   cliLoop();
-  mqttClient.loop();
   switchesLoop();
   webServerLoop();
-
+  mqttClient.loop();
+  
   static long lastCheck = 0;
   long now = millis();
-  if (now < lastCheck or now - lastCheck > 2000)
+  if (now < lastCheck or now - lastCheck > 1000)
   {
     lastCheck = now;
-
+    
+    wifiLoop();
     mqttConnectionCheck();
   }
   delay(10);

@@ -35,9 +35,9 @@
 #define EEPROM_MQTT_PORT_INDEX              100
 #define EEPROM_UNSIGNED_INT_ADDRESS(index)  (EEPROM_UNSIGNED_INT_START_ADDRESS + index * EEPROM_UNSINGED_INT_SIZE)
 
-#define EEPROM_WIFI_ACTUVE_INDEX              100
-#define EEPROM_AP_ACTUVE_INDEX                101
-#define EEPROM_MQTT_ACTUVE_INDEX              102
+#define EEPROM_WIFI_ACTIVE_INDEX              100
+#define EEPROM_AP_ACTIVE_INDEX                101
+#define EEPROM_MQTT_ACTIVE_INDEX              102
 #define EEPROM_MQTT_SECURE_INDEX              103
 #define EEPROM_BOOL_ADDRESS(index)  (EEPROM_BOOL_START_ADDRESS + index * EEPROM_BOOL_SIZE)
 //
@@ -58,12 +58,13 @@ static char mqttPassword[EEPROM_MQTT_PASSWORD_LEN + 1];
 
 unsigned int mqttPort = 0;
 
-void setWifiSsid(const char* str)
+void setWifiSsid(const char* str, bool restart)
 {
   eepromWriteString(EEPROM_ADDR, EEPROM_WIFI_SSID_ADDRESS, EEPROM_WIFI_SSID_LEN, str);
   strncpy(wifiSsid, str, EEPROM_WIFI_SSID_LEN);
   wifiSsid[EEPROM_WIFI_SSID_LEN] = 0;
-  restartWifi();
+  if (restart)
+    restartWifi();
 }
 
 const char* getWifiSsid()
@@ -71,12 +72,27 @@ const char* getWifiSsid()
   return wifiSsid;
 }
 
-void setWifiPassword(const char* str)
+
+bool getWifiActive()
+{
+  return wifiActive;
+}
+
+void setWifiPassword(const char* str, bool restart)
 {
   eepromWriteString(EEPROM_ADDR, EEPROM_WIFI_PASSWORD_ADDRESS, EEPROM_WIFI_PASSWORD_LEN, str);
   strncpy(wifiPassword, str, EEPROM_WIFI_PASSWORD_LEN);
   wifiPassword[EEPROM_WIFI_PASSWORD_LEN] = 0;
-  restartWifi();
+  if (restart)
+    restartWifi();
+}
+
+void setWifiActive(bool active, bool restart)
+{
+  eepromWriteBool(EEPROM_ADDR, EEPROM_BOOL_ADDRESS(EEPROM_WIFI_ACTIVE_INDEX), active);
+  wifiActive = active;
+  if (restart)
+    restartWifi();
 }
 
 const char* getWifiPassword()
@@ -84,12 +100,13 @@ const char* getWifiPassword()
   return wifiPassword;
 }
 
-void setApSsid(const char* str)
+void setApSsid(const char* str, bool restart)
 {
   eepromWriteString(EEPROM_ADDR, EEPROM_AP_SSID_ADDRESS, EEPROM_AP_SSID_LEN, str);
   strncpy(apSsid, str, EEPROM_AP_SSID_LEN);
   apSsid[EEPROM_AP_SSID_LEN] = 0;
-  restartAp();
+  if (restart)
+    restartAp();
 }
 
 const char* getApSsid()
@@ -97,12 +114,18 @@ const char* getApSsid()
   return apSsid;
 }
 
-void setApPassword(const char* str)
+bool getApActive()
+{
+  return apActive;
+}
+
+void setApPassword(const char* str, bool restart)
 {
   eepromWriteString(EEPROM_ADDR, EEPROM_AP_PASSWORD_ADDRESS, EEPROM_AP_PASSWORD_LEN, str);
   strncpy(apPassword, str, EEPROM_AP_PASSWORD_LEN);
   apPassword[EEPROM_AP_PASSWORD_LEN] = 0;
-  restartAp();
+  if (restart)
+    restartAp();
 }
 
 const char* getApPassword()
@@ -110,12 +133,21 @@ const char* getApPassword()
   return apPassword;
 }
 
-void setMqttHostname(const char* str)
+void setApActive(bool active, bool restart)
+{
+  eepromWriteBool(EEPROM_ADDR, EEPROM_BOOL_ADDRESS(EEPROM_AP_ACTIVE_INDEX), active);
+  apActive = active;
+  if (restart)
+    restartAp();
+}
+
+void setMqttHostname(const char* str, bool restart)
 {
   eepromWriteString(EEPROM_ADDR, EEPROM_MQTT_HOSTNAME_ADDRESS, EEPROM_MQTT_HOSTNAME_LEN, str);
   strncpy(mqttHostname, str, EEPROM_MQTT_HOSTNAME_LEN);
   mqttHostname[EEPROM_MQTT_HOSTNAME_LEN] = 0;
-  restartMqtt();
+  if (restart)
+    restartMqtt();
 }
 
 const char* getMqttHostname()
@@ -124,11 +156,12 @@ const char* getMqttHostname()
 }
 
 
-void setMqttPort(uint16_t port)
+void setMqttPort(uint16_t port, bool restart)
 {
   eepromWriteUnsignedInt(EEPROM_ADDR, EEPROM_UNSIGNED_INT_ADDRESS(EEPROM_MQTT_PORT_INDEX), (unsigned int)port);
   mqttPort = port;
-  restartMqtt();
+  if (restart)
+    restartMqtt();
 }
 
 uint16_t getMqttPort()
@@ -136,12 +169,13 @@ uint16_t getMqttPort()
   return mqttPort;
 }
 
-void setMqttUsername(const char* str)
+void setMqttUsername(const char* str, bool restart)
 {
   eepromWriteString(EEPROM_ADDR, EEPROM_MQTT_USERNAME_ADDRESS, EEPROM_MQTT_USERNAME_LEN, str);
   strncpy(mqttUsername, str, EEPROM_MQTT_USERNAME_LEN);
   mqttUsername[EEPROM_MQTT_USERNAME_LEN] = 0;
-  restartMqtt();
+  if (restart)
+    restartMqtt();
 }
 
 const char* getMqttUsername()
@@ -149,12 +183,13 @@ const char* getMqttUsername()
   return mqttUsername;
 }
 
-void setMqttPassword(const char* str)
+void setMqttPassword(const char* str, bool restart)
 {
   eepromWriteString(EEPROM_ADDR, EEPROM_MQTT_PASSWORD_ADDRESS, EEPROM_MQTT_PASSWORD_LEN, str);
   strncpy(mqttPassword, str, EEPROM_MQTT_PASSWORD_LEN);
   mqttPassword[EEPROM_MQTT_PASSWORD_LEN] = 0;
-  restartMqtt();
+  if (restart)
+    restartMqtt();
 }
 
 const char* getMqttPassword()
@@ -162,14 +197,29 @@ const char* getMqttPassword()
   return mqttPassword;
 }
 
+bool getMqttActive()
+{
+  return mqttActive;
+}
 
-void setDeviceName(const char* str)
+void setMqttActive(bool active, bool restart)
+{
+  eepromWriteBool(EEPROM_ADDR, EEPROM_BOOL_ADDRESS(EEPROM_MQTT_ACTIVE_INDEX), active);
+  mqttActive = active;
+  if (restart)
+    restartMqtt();
+}
+
+void setDeviceName(const char* str, bool restart)
 {
   eepromWriteString(EEPROM_ADDR, EEPROM_DEVICE_NAME_ADDRESS, EEPROM_DEVICE_NAME_LEN, str);
   strncpy(deviceName, str, EEPROM_DEVICE_NAME_LEN);
   deviceName[EEPROM_DEVICE_NAME_LEN] = 0;
-  restartMqtt();
-  restartWifi();
+  if (restart)
+  {
+    restartMqtt();
+    //restartWifi();
+  }
 }
 
 const char* getDeviceName()
@@ -182,10 +232,17 @@ void readParameters()
   eepromReadString(EEPROM_ADDR, EEPROM_DEVICE_NAME_ADDRESS, EEPROM_DEVICE_NAME_LEN, deviceName, EEPROM_DEVICE_NAME_LEN + 1);
   eepromReadString(EEPROM_ADDR, EEPROM_WIFI_SSID_ADDRESS, EEPROM_WIFI_SSID_LEN, wifiSsid, EEPROM_WIFI_SSID_LEN + 1);
   eepromReadString(EEPROM_ADDR, EEPROM_WIFI_PASSWORD_ADDRESS, EEPROM_WIFI_PASSWORD_LEN, wifiPassword, EEPROM_WIFI_PASSWORD_LEN + 1);
+  eepromReadString(EEPROM_ADDR, EEPROM_AP_SSID_ADDRESS, EEPROM_AP_SSID_LEN, apSsid, EEPROM_AP_SSID_LEN + 1);
+  eepromReadString(EEPROM_ADDR, EEPROM_AP_PASSWORD_ADDRESS, EEPROM_AP_PASSWORD_LEN, apPassword, EEPROM_AP_PASSWORD_LEN + 1);
   eepromReadString(EEPROM_ADDR, EEPROM_MQTT_HOSTNAME_ADDRESS, EEPROM_MQTT_HOSTNAME_LEN, mqttHostname, EEPROM_MQTT_HOSTNAME_LEN + 1);
   eepromReadString(EEPROM_ADDR, EEPROM_MQTT_USERNAME_ADDRESS, EEPROM_MQTT_USERNAME_LEN, mqttUsername, EEPROM_MQTT_USERNAME_LEN + 1);
   eepromReadString(EEPROM_ADDR, EEPROM_MQTT_PASSWORD_ADDRESS, EEPROM_MQTT_PASSWORD_LEN, mqttPassword, EEPROM_MQTT_PASSWORD_LEN + 1);  
+
   mqttPort = (uint16_t)eepromReadUnsignedInt(EEPROM_ADDR, EEPROM_UNSIGNED_INT_ADDRESS(EEPROM_MQTT_PORT_INDEX));
+
+  wifiActive = eepromReadBool(EEPROM_ADDR, EEPROM_BOOL_ADDRESS(EEPROM_WIFI_ACTIVE_INDEX));
+  apActive = eepromReadBool(EEPROM_ADDR, EEPROM_BOOL_ADDRESS(EEPROM_AP_ACTIVE_INDEX));
+  mqttActive = eepromReadBool(EEPROM_ADDR, EEPROM_BOOL_ADDRESS(EEPROM_MQTT_ACTIVE_INDEX));
 }
 
 void setupParameters()

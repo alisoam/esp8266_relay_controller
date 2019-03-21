@@ -1,32 +1,13 @@
 #include "command_line.hpp"
 
+#include <time.h>
 #include <cstring>
 
+#include "mqtt.hpp"
 #include "parameters.hpp"
 #include "peripherals.hpp"
 
 static CommandLine cmd;
-
-static std::string timeCmd(const std::vector<std::string>& args)
-{
-  std::stringstream IO_;
-  if (args.size() == 0 or args.at(0) == "help")
-  {
-    IO_ << "time get" << std::endl
-        << "time set yyyy mm dd HH MM SS";
-  }
-  else if (args.at(0) == "get")
-  {
-    DateTime t = rtc.now();
-    IO_ << "Now: " << (int)(t.year()) << "-" << (int)(t.month()) << "-" << (int)(t.day()) << " "
-        << (int)(t.hour()) << ":" << (int)(t.minute()) << ":" << (int)(t.second());
-  }
-  else if (args.at(0) == "set")
-  {
-     rtc.adjust(DateTime(atoi(args.at(1).c_str()), atoi(args.at(2).c_str()), atoi(args.at(3).c_str()), atoi(args.at(4).c_str()), atoi(args.at(5).c_str()), atoi(args.at(6).c_str())));
-  }
-  return IO_.str();
-}
 
 static std::string wifiCmd(const std::vector<std::string>& args)
 {
@@ -34,12 +15,24 @@ static std::string wifiCmd(const std::vector<std::string>& args)
   if (args.size() == 0 or args.at(0) == "help")
   {
     IO_ << "wifi get" << std::endl
-        << "wifi set ssid [SSID] << std::endl"
+        << "wifi active" << std::endl
+        << "wifi deactive" << std::endl
+        << "wifi set ssid [SSID]" << std::endl
         << "wifi set password [PASSWORD]";
   }
   else if (args.at(0) == "get")
   {
-    IO_ << "wifi: " << getWifiSsid() << ":" << getWifiPassword();
+    IO_ << "wifi: " << getWifiSsid() << ":" << getWifiPassword() << '(' << (getWifiActive()? "active": "deactive") << (getWifiActive()? (WiFi.isConnected()? ", connected": ", not connected"): "") << ')';
+  }
+  else if (args.at(0) == "active")
+  {
+    setWifiActive(true);
+    IO_ << "WIFI is active";
+  }
+  else if (args.at(0) == "deactive")
+  {
+    setWifiActive(false);
+    IO_ << "WIFI is deactive";
   }
   else if (args.at(0) == "set")
   {
@@ -50,12 +43,12 @@ static std::string wifiCmd(const std::vector<std::string>& args)
     if (args.at(1) == "ssid")
     {
       setWifiSsid(arg.c_str());
-      IO_ << "WIFI SSID set to: \"" << arg << "\". You should restart the system.";
+      IO_ << "WIFI SSID set to: \"" << arg << "\".";
     }
     else if (args.at(1) == "password")
     {
       setWifiPassword(arg.c_str());
-      IO_ << "WIFI password set to: \"" << arg.c_str() << "\". You should restart the system.";
+      IO_ << "WIFI password set to: \"" << arg.c_str() << "\".";
     }
   }
   return IO_.str();
@@ -65,14 +58,22 @@ static std::string apCmd(const std::vector<std::string>& args)
 {
   std::stringstream IO_;
   if (args.size() == 0 or args.at(0) == "help")
-  {
     IO_ << "ap get" << std::endl
-        << "ap set ssid [SSID] << std::endl"
+        << "ap active" << std::endl
+        << "ap deactive" << std::endl
+        << "ap set ssid [SSID]" << std::endl
         << "ap set password [PASSWORD]";
-  }
   else if (args.at(0) == "get")
+    IO_ << "ap: " << getApSsid() << ":" << getApPassword() << (getApActive()? "(active)": "(deactive)");
+  else if (args.at(0) == "active")
   {
-    IO_ << "ap: " << getApSsid() << ":" << getApPassword();
+    setApActive(true);
+    IO_ << "AP is active";
+  }
+  else if (args.at(0) == "deactive")
+  {
+    setApActive(false);
+    IO_ << "AP is deactive";
   }
   else if (args.at(0) == "set")
   {
@@ -87,8 +88,13 @@ static std::string apCmd(const std::vector<std::string>& args)
     }
     else if (args.at(1) == "password")
     {
-      setApPassword(arg.c_str());
-      IO_ << "AP password set to: \"" << arg.c_str() << "\".";
+      if (arg.length() >= 8)
+      {
+        setApPassword(arg.c_str());
+        IO_ << "AP password set to: \"" << arg.c_str() << "\".";
+      }
+      else
+        IO_ << "AP password should be longer than 8 character.";
     }
   }
   return IO_.str();
@@ -107,10 +113,20 @@ static std::string mqttCmd(const std::vector<std::string>& args)
   }
   else if (args.at(0) == "get")
   {
-    IO_ << "mqtt: " << std::endl
+    IO_ << "mqtt: " << '(' << (getMqttActive()? "active": "deactive") << (getMqttActive()? (mqttClient.connected()? ", connected": ", not connected"): "") << ')' << std::endl
         << "\tHost: \"" << getMqttHostname() << ":" << getMqttPort() << "\"" << std::endl
         << "\tUsername: \"" << getMqttUsername() << "\"" <<std::endl
         << "\tPassword: \"" << getMqttPassword() << "\"" <<std::endl;
+  }
+  else if (args.at(0) == "active")
+  {
+    setMqttActive(true);
+    IO_ << "MQTT is active";
+  }
+  else if (args.at(0) == "deactive")
+  {
+    setMqttActive(false);
+    IO_ << "MQTT is deactive";
   }
   else if (args.at(0) == "set")
   {
@@ -148,12 +164,16 @@ static std::string deviceCmd(const std::vector<std::string>& args)
   if (args.size() == 0 or args.at(0) == "help")
   {
     IO_ << "device get" << std::endl
-        << "device set name [DEVICENAME]";
+        << "device set name [DEVICENAME]" << std::endl
+        << "device set time [YYYY-MM-DD hh:mm:ss]";
   }
   else if (args.at(0) == "get")
   {
     IO_ << "device: " << std::endl
-        << "\tName: \"" << getDeviceName() << "\"";
+        << "\tName: \"" << getDeviceName() << "\"" << std::endl;
+    DateTime t = rtc.now();
+    IO_ << "\tTime: " << (int)(t.year()) << "-" << (int)(t.month()) << "-" << (int)(t.day()) << " "
+        << (int)(t.hour()) << ":" << (int)(t.minute()) << ":" << (int)(t.second());
   }
   else if (args.at(0) == "set")
   {
@@ -166,13 +186,18 @@ static std::string deviceCmd(const std::vector<std::string>& args)
       setDeviceName(arg.c_str());
       IO_ << "Device name set to: \"" << arg << "\".";
     }
+    if (args.at(1) == "time")
+    {
+      struct tm tm;
+      strptime(arg.c_str(), "%Y-%m-%d %H:%M:%S", &tm);
+      rtc.adjust(DateTime(tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec));
+    }
   }
   return IO_.str();
 }
 
 void setupCli()
 {
-  cmd.addCommand("time", timeCmd);
   cmd.addCommand("wifi", wifiCmd);
   cmd.addCommand("ap", apCmd);
   cmd.addCommand("mqtt", mqttCmd);

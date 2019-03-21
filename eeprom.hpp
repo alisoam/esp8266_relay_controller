@@ -31,4 +31,7 @@ void eepromWriteString(int deviceaddress, unsigned int eeaddress, unsigned int l
 unsigned int eepromReadUnsignedInt(int deviceaddress, unsigned int eeaddress);
 void eepromWriteUnsignedInt(int deviceaddress, unsigned int eeaddress, unsigned int value);
 
+bool eepromReadBool(int deviceaddress, unsigned int eeaddress);
+void eepromWriteBool(int deviceaddress, unsigned int eeaddress, bool value);
+
 #endif

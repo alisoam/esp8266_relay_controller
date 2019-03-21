@@ -94,3 +94,17 @@ void eepromWriteUnsignedInt(int deviceaddress, unsigned int eeaddress, unsigned 
 {
   eepromWrite(deviceaddress, eeaddress, (uint8_t*)&value, EEPROM_UNSINGED_INT_SIZE);
 }
+
+bool eepromReadBool(int deviceaddress, unsigned int eeaddress)
+{
+  char buffer;
+  eepromRead(deviceaddress, eeaddress, (uint8_t*)&buffer, 1);
+  if (buffer == 0xaa)
+    return true;
+  return false;
+}
+
+void eepromWriteBool(int deviceaddress, unsigned int eeaddress, bool value)
+{
+  eepromWrite(deviceaddress, eeaddress, (uint8_t*)(value? "\xaa":"\x00"), EEPROM_BOOL_SIZE);
+}

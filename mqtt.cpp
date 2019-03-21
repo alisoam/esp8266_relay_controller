@@ -6,14 +6,13 @@
 
 PubSubClient mqttClient(espClient);
 
-
-
 #define TOPIC_BUFFER_LEN    40
 static char topicBuffer[TOPIC_BUFFER_LEN];
 
 static void startMqtt()
 {
-  mqttClient.setServer(getMqttHostname(), getMqttPort());
+  if (getMqttActive())
+    mqttClient.setServer(getMqttHostname(), getMqttPort());
 }
 
 void mqttCallback(const char* topic, byte* payload, unsigned int length)
@@ -81,39 +80,55 @@ void restartMqtt()
 void mqttConnectionCheck()
 {
   static bool subscribed = false;
-  if (WiFi.status() == WL_CONNECTED)
+  if (!getMqttActive())
   {
-    Serial.println("wifi is connected");
+    if (mqttClient.connected())
+      mqttClient.disconnect();
+    return;
+  }
+  if (WiFi.isConnected())
+  {
     if (!mqttClient.connected())
     {
       subscribed = false;
-      Serial.print("Attempting MQTT connection...");
-      if (((strlen(getMqttUsername()) > 0) && mqttClient.connect(getDeviceName(), getMqttUsername(), getMqttPassword())) || 
-          ((strlen(getMqttUsername()) == 0) && mqttClient.connect(getDeviceName())))
+      static long checkCount = 0;
+      checkCount++;
+      if (checkCount == 5)
       {
-        Serial.println("mqtt connected");
-        publishStatus();
+        Serial.print("Attempting MQTT connection...");
+        if (((strlen(getMqttUsername()) > 0) && mqttClient.connect(getDeviceName(), getMqttUsername(), getMqttPassword())) || 
+            ((strlen(getMqttUsername()) == 0) && mqttClient.connect(getDeviceName())))
+        {
+          Serial.println("mqtt connected");
+          publishStatus();
+        }
+        else
+        {
+          Serial.print("mqtt connection failed, rc=");
+          Serial.println(mqttClient.state());
+        }
       }
-      else
+      else if (checkCount > 10)
       {
-        Serial.print("mqtt connection failed, rc=");
-        Serial.println(mqttClient.state());
+        checkCount = 0;
       }
     }
     else
       Serial.println("mqtt is connected");
-    if (mqttClient.connected() and not subscribed)
+    if (mqttClient.connected())
     {
-      Serial.println("mqtt is subscribing to corresponding topic");
-      snprintf(topicBuffer, TOPIC_BUFFER_LEN, "%s/#", getDeviceName());
-      subscribed = mqttClient.subscribe(topicBuffer);
+      if (not subscribed)
+      {
+        Serial.println("mqtt is subscribing to corresponding topic");
+        snprintf(topicBuffer, TOPIC_BUFFER_LEN, "%s/#", getDeviceName());
+        subscribed = mqttClient.subscribe(topicBuffer);
+      }
+      else
+        Serial.println("mqtt client is subscribed to corresponding topic");
     }
-    else
-      Serial.println("mqtt client is subscribed to corresponding topic");
   }
   else
   {
-    Serial.println("wifi is not connected");
     subscribed = false;
   }
 }
